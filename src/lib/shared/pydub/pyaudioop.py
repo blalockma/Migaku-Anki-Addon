@@ -7,6 +7,8 @@ except ImportError:
 import math
 import struct
 
+buffer = memoryview
+
 try:
     from fractions import gcd
 except ImportError:  # Python 3.9+
@@ -30,7 +32,7 @@ def _check_params(length, size):
 
 
 def _sample_count(cp, size):
-    return len(cp) / size
+    return len(cp) // size
 
 
 def _get_samples(cp, size, signed=True):
