@@ -1,4 +1,5 @@
 import os
+import platform
 from pathlib import Path
 import subprocess
 import requests
@@ -72,6 +73,26 @@ class ProgramManager(aqt.qt.QObject):
 
         if self.check_set_program_path(self.shared_user_program_name):
             return
+
+        if is_mac:
+            for directory in (
+                "/opt/homebrew/bin",
+                "/usr/local/bin",
+                "/opt/local/bin",
+            ):
+                if self.check_set_program_path(
+                    os.path.join(directory, self.program_executable_name)
+                ):
+                    return
+
+            if platform.machine() == "arm64":
+                util.show_critical(
+                    f"{self.program_name} is required for converting media files, "
+                    "but Migaku's bundled macOS version is not compatible with "
+                    "Apple Silicon.\n\n"
+                    "Install FFmpeg with Homebrew (brew install ffmpeg), then restart Anki."
+                )
+                return
 
         # Install ffmpeg
         self.start_download()
