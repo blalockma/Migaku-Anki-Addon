@@ -4,6 +4,7 @@ import re
 from typing import Optional
 import requests
 
+from . import config
 from .migaku_connection.handle_files import handle_audio_file, move_file_to_media_dir
 
 @dataclass
@@ -101,6 +102,18 @@ def remove_syntax_k(text: str):
 def remove_syntax_euro(text: str):
     return REMOVE_RE_BRACKETS.sub(r"\1", text)
 
+SENTENCE_LINEBREAK_RE = re.compile(r"<br\s*/?>", re.IGNORECASE)
+
+
+def remove_sentence_linebreaks(text: str) -> str:
+    """Apply the "Remove line breaks from sentences" setting, e.g. to join
+    multiple subtitle lines that were combined into one sentence."""
+    if not config.get("remove_sentence_linebreaks", False):
+        return text
+    replacement = config.get("sentence_linebreak_replacement", "")
+    return SENTENCE_LINEBREAK_RE.sub(lambda _: replacement, text)
+
+
 def card_fields_from_dict(data: dict[str, any]):
     br = "\n<br>\n"
 
@@ -124,7 +137,7 @@ def card_fields_from_dict(data: dict[str, any]):
     imagess = br.join(images)
 
     targetWord = data.get("targetWord", "")
-    sentence = data.get("sentence", "")
+    sentence = remove_sentence_linebreaks(data.get("sentence", ""))
 
     cjk_found = len(re.findall(r'[\u2e80-\u9fff\uac00-\ud7ff]', targetWord)) > 0
     k_found = len(re.findall(r'[\u1100-\u11FF\u3130-\u318F\uA960-\uA97F\uAC00-\uD7AF\uD7B0-\uD7FF]', targetWord)) > 0

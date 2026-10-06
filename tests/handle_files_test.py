@@ -129,6 +129,14 @@ def load_card_types():
     )
     sys.modules.setdefault("requests", types.ModuleType("requests"))
 
+    fake_card_config = types.ModuleType("card_types_test_addon.config")
+    fake_card_config.values = {}
+    fake_card_config.get = lambda key, default=None: fake_card_config.values.get(
+        key, default
+    )
+    sys.modules["card_types_test_addon.config"] = fake_card_config
+    package.config = fake_card_config
+
     spec = importlib.util.spec_from_file_location(
         "card_types_test_addon.card_types", root / "src" / "card_types.py"
     )
@@ -150,3 +158,36 @@ assert (
 
 assert card_types.extract_readings_cjk("機会[きかい;n2,h ]") == "きかい"
 print("✓ multi-pattern pitch accent is stripped from extracted readings")
+
+card_config = sys.modules["card_types_test_addon.config"]
+split_subtitles = {
+    "targetWord": "canal",
+    "sentence": "Hola, soy Agustina y en este<br>canal te <strong>enseñamos</strong><BR/>español.",
+}
+
+card_config.values = {}
+card = card_types.card_fields_from_dict(split_subtitles)
+assert card.sentence == split_subtitles["sentence"]
+
+card_config.values = {
+    "remove_sentence_linebreaks": True,
+    "sentence_linebreak_replacement": " ",
+}
+card = card_types.card_fields_from_dict(split_subtitles)
+assert card.sentence == "Hola, soy Agustina y en este canal te <strong>enseñamos</strong> español."
+assert "<br" not in card.sentenceNoSyntax.lower()
+
+card_config.values = {"remove_sentence_linebreaks": True}
+card = card_types.card_fields_from_dict(
+    {"targetWord": "機会", "sentence": "いい機会[きかい]<br>ですね"}
+)
+assert card.sentence == "いい機会[きかい]ですね"
+assert card.sentenceNoSyntax == "いい機会ですね"
+
+card_config.values = {
+    "remove_sentence_linebreaks": True,
+    "sentence_linebreak_replacement": "\\1",
+}
+assert card_types.remove_sentence_linebreaks("a<br>b") == "a\\1b"
+card_config.values = {}
+print("✓ sentence line breaks from combined subtitles follow field settings")
